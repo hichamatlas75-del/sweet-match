@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#7c2ae8" />
+  <meta name="description" content="Sweet Match : Jeu de réflexion Match-3 gourmand, coloré et 100 % original." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Sweet Match — L'Aventure Sucrée</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- Décor d'arrière-plan animé (bulles et étoiles sucrées) -->
+  <div class="bg-decor" aria-hidden="true">
+    <span class="bubble b1"></span>
+    <span class="bubble b2"></span>
+    <span class="bubble b3"></span>
+    <span class="bubble b4"></span>
+    <span class="bubble b5"></span>
+    <span class="bubble b6"></span>
+  </div>
+
+  <!-- Région ARIA Live pour l'accessibilité (lecteurs d'écran) -->
+  <div id="aria-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ==================================================================== -->
+  <!-- 1. ÉCRAN D'ACCUEIL (MENU)                                            -->
+  <!-- ==================================================================== -->
+  <section id="screen-menu" class="screen active" aria-label="Menu principal">
+    <div class="menu-card">
+      <div class="mascot-badge" aria-hidden="true">🍭👑🍬</div>
+      <h1 class="game-logo">
+        <span class="logo-sweet">Sweet</span>
+        <span class="logo-match">Match</span>
+      </h1>
+      <p class="menu-subtitle">Le Royaume des Confiseries Éclatantes</p>
+
+      <div class="menu-actions">
+        <button id="btn-play-main" class="btn-3d btn-pink btn-large">
+          ▶ JOUER
+        </button>
+        <div class="menu-secondary-row">
+          <button id="btn-open-shop-menu" class="btn-3d btn-cyan">
+            🛍️ Boutique
+          </button>
+          <button id="btn-open-settings-menu" class="btn-3d btn-purple">
+            ⚙️ Options
+          </button>
+        </div>
+      </div>
+
+      <div class="accessibility-hint">
+        <span>🖱️ Glisser / Toucher</span> • <span>⌨️ Flèches + Entrée</span> • <span>👁️ Formes & Mode Daltonien</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================================== -->
+  <!-- 2. ÉCRAN CARTE DES 100 NIVEAUX (MAP)                                 -->
+  <!-- ==================================================================== -->
+  <section id="screen-map" class="screen" aria-label="Carte des niveaux">
+    <header class="top-bar">
+      <button id="btn-map-home" class="btn-3d btn-icon" aria-label="Retour à l'accueil">🏠</button>
+
+      <button id="btn-map-lives" class="status-pill pill-lives" aria-label="Vies restantes">
+        <span class="pill-icon">❤️</span>
+        <span id="map-lives-count">5/5</span>
+        <small id="map-lives-timer" class="pill-sub">MAX</small>
+      </button>
+
+      <div class="status-pill pill-stars" aria-label="Total d'étoiles">
+        <span class="pill-icon">⭐</span>
+        <span id="map-stars-count">0</span>
+      </div>
+
+      <div class="status-pill pill-coins" aria-label="Cristaux de sucre">
+        <span class="pill-icon">💎</span>
+        <span id="map-coins-count">250</span>
+      </div>
+
+      <button id="btn-map-shop" class="btn-3d btn-icon" aria-label="Ouvrir la boutique">🛍️</button>
+      <button id="btn-map-settings" class="btn-3d btn-icon" aria-label="Paramètres">⚙️</button>
+    </header>
+
+    <div id="map-scroll-container" class="map-scroll-container">
+      <div id="map-nodes-track" class="map-nodes-track">
+        <!-- Généré dynamiquement par ui.js (SVG + 100 niveaux + 10 chapitres) -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================================== -->
+  <!-- 3. ÉCRAN DE JEU (PLAYING / RESOLVING)                                -->
+  <!-- ==================================================================== -->
+  <section id="screen-game" class="screen" aria-label="Plateau de jeu">
+    <header class="game-hud">
+      <div class="hud-top-row">
+        <div class="hud-level-box">
+          <span id="hud-level-num" class="hud-level-badge">Niv. 1</span>
+          <div class="hud-star-bar" aria-label="Progression d'étoiles">
+            <div id="hud-star-fill" class="hud-star-fill"></div>
+            <span id="hud-star-1" class="hud-star s1">★</span>
+            <span id="hud-star-2" class="hud-star s2">★</span>
+            <span id="hud-star-3" class="hud-star s3">★</span>
+          </div>
+          <div class="hud-score-line">Score : <strong id="hud-score-val">0</strong></div>
+        </div>
+
+        <div class="hud-moves-box">
+          <span id="hud-moves-label" class="hud-moves-label">Coups</span>
+          <strong id="hud-moves-val" class="hud-moves-val">25</strong>
+        </div>
+
+        <div class="hud-goals-box">
+          <span class="hud-goals-title">Objectifs</span>
+          <div id="hud-goals-container" class="hud-goals-list"></div>
+        </div>
+      </div>
+    </header>
+
+    <div id="booster-instruction-banner" class="booster-banner" style="display:none;"></div>
+
+    <main id="board-stage" class="board-stage">
+      <div class="canvas-wrapper">
+        <canvas id="board-canvas" tabindex="0" aria-label="Grille de jeu 9 par 9. Utilisez les flèches du clavier et Entrée pour échanger des bonbons."></canvas>
+        <canvas id="fx-canvas" aria-hidden="true"></canvas>
+      </div>
+    </main>
+
+    <footer class="game-footer">
+      <div class="boosters-bar" role="group" aria-label="Boosters">
+        <button class="booster-btn btn-3d" data-booster="hammer" title="Marteau sucré : détruit une case">
+          <span class="booster-emoji">🔨</span>
+          <span class="booster-name">Marteau</span>
+          <span class="booster-count">3</span>
+        </button>
+        <button class="booster-btn btn-3d" data-booster="free_swap" title="Main magique : échange 2 bonbons sans match">
+          <span class="booster-emoji">✋</span>
+          <span class="booster-name">Main</span>
+          <span class="booster-count">2</span>
+        </button>
+        <button class="booster-btn btn-3d" data-booster="extra_moves" title="Ajoute +5 coups immédiatement">
+          <span class="booster-emoji">➕5</span>
+          <span class="booster-name">+5 Coups</span>
+          <span class="booster-count">2</span>
+        </button>
+        <button class="booster-btn btn-3d" data-booster="color_bomb" title="Place une Bombe Couleur sur le plateau">
+          <span class="booster-emoji">💣</span>
+          <span class="booster-name">Bombe</span>
+          <span class="booster-count">1</span>
+        </button>
+      </div>
+
+      <div class="game-quick-actions">
+        <button id="btn-game-map" class="btn-3d btn-small" title="Retour à la carte">🗺️ Carte</button>
+        <button id="btn-game-restart" class="btn-3d btn-small" title="Recommencer le niveau">🔄 Recommencer</button>
+        <button id="btn-game-pause" class="btn-3d btn-small" title="Options">⚙️</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- ==================================================================== -->
+  <!-- MODALES (Intro, Victoire, Défaite, Plus de vies, Boutique, Options)  -->
+  <!-- ==================================================================== -->
+
+  <!-- Modale Présentation du Niveau (LEVEL_INTRO) -->
+  <div id="modal-level-intro" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-level-title">
+    <div class="modal-card">
+      <button id="btn-close-intro" class="modal-close" aria-label="Fermer">✕</button>
+      <h2 id="intro-level-title" class="modal-title">Niveau 1</h2>
+      <p id="intro-level-record" class="modal-subtitle">Nouveau défi !</p>
+
+      <div id="intro-tutorial-box" class="tutorial-box" style="display:none;">
+        <div id="intro-tutorial-icon" class="tutorial-icon">🍬</div>
+        <div class="tutorial-content">
+          <strong id="intro-tutorial-title">Astuce</strong>
+          <p id="intro-tutorial-text"></p>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Objectifs du niveau</h3>
+        <div id="intro-goals-list" class="intro-goals-list"></div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Booster de départ</h3>
+        <button id="btn-prebooster-bomb" class="prebooster-chip">
+          <span>💣 Bombe Couleur dès le départ</span>
+          <strong class="pre-count">x1</strong>
+        </button>
+      </div>
+
+      <button id="btn-launch-level" class="btn-3d btn-pink btn-large">
+        🚀 C'est parti !
+      </button>
+    </div>
+  </div>
+
+  <!-- Modale Victoire (WIN) -->
+  <div id="modal-win" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="win-title">
+    <div class="modal-card">
+      <h2 id="win-title" class="modal-title">🎉 Sensationnel !</h2>
+      <div id="win-stars-display" class="win-stars-row">
+        <span class="win-star lit">★</span>
+        <span class="win-star lit">★</span>
+        <span class="win-star">★</span>
+      </div>
+      <p id="win-score-val" class="win-score-big">4500 pts</p>
+      <div class="reward-box">
+        Récompense : <strong id="win-coins-reward">+60 💎</strong>
+      </div>
+
+      <div class="modal-actions-row">
+        <button id="btn-win-map" class="btn-3d btn-purple">🗺️ Carte</button>
+        <button id="btn-win-next" class="btn-3d btn-pink">Niveau suivant ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Défaite (LOSE) -->
+  <div id="modal-lose" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lose-title">
+    <div class="modal-card">
+      <h2 id="lose-title" class="modal-title">😢 Niveau échoué</h2>
+      <p id="lose-reason-text" class="modal-subtitle">Tu n’as plus de coups disponibles !</p>
+      <p id="lose-score-val" class="win-score-big">1200 pts</p>
+
+      <div class="modal-actions-col">
+        <button id="btn-lose-buy-moves" class="btn-3d btn-cyan">
+          ➕ Continuer avec +5 coups (60 💎)
+        </button>
+        <div class="modal-actions-row">
+          <button id="btn-lose-map" class="btn-3d btn-purple">🗺️ Carte</button>
+          <button id="btn-lose-retry" class="btn-3d btn-pink">🔄 Réessayer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Plus de Vies -->
+  <div id="modal-no-lives" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="nolives-title">
+    <div class="modal-card">
+      <button id="btn-close-nolives" class="modal-close" aria-label="Fermer">✕</button>
+      <h2 id="nolives-title" class="modal-title">💔 Plus de vies !</h2>
+      <p class="modal-subtitle">Une vie est régénérée automatiquement toutes les 30 minutes.</p>
+
+      <div class="modal-actions-col">
+        <button id="btn-refill-lives-coins" class="btn-3d btn-pink">
+          ❤️ Faire le plein (80 💎)
+        </button>
+        <button id="btn-refill-lives-free" class="btn-3d btn-cyan">
+          🎁 Cadeau du Chef Confiseur (Gratuit)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Boutique (Monnaie virtuelle gagnée en jouant) -->
+  <div id="modal-shop" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+    <div class="modal-card">
+      <button id="btn-close-shop" class="modal-close" aria-label="Fermer">✕</button>
+      <h2 id="shop-title" class="modal-title">🛍️ Confiserie Royale</h2>
+      <p class="modal-subtitle">Tes cristaux : <strong id="shop-coins-count">250</strong> 💎 (gagnés en jouant, aucun achat réel)</p>
+
+      <div class="shop-list">
+        <div class="shop-item">
+          <div>
+            <strong>🔨 Marteau Sucré</strong>
+            <small>Brise n'importe quel bonbon ou obstacle</small>
+          </div>
+          <button class="btn-3d btn-cyan shop-buy-btn" data-item="hammer" data-cost="50">50 💎</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>✋ Main Magique</strong>
+            <small>Échange librement 2 cases adjacentes</small>
+          </div>
+          <button class="btn-3d btn-cyan shop-buy-btn" data-item="free_swap" data-cost="65">65 💎</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>➕ +5 Coups</strong>
+            <small>Ajoute 5 coups en cours de partie</small>
+          </div>
+          <button class="btn-3d btn-cyan shop-buy-btn" data-item="extra_moves" data-cost="60">60 💎</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>💣 Bombe Couleur</strong>
+            <small>Place une Bombe Couleur sur le plateau</small>
+          </div>
+          <button class="btn-3d btn-cyan shop-buy-btn" data-item="color_bomb" data-cost="90">90 💎</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>❤️ Plein de Vies (5/5)</strong>
+            <small>Restaure immédiatement tes 5 vies</small>
+          </div>
+          <button class="btn-3d btn-pink shop-buy-btn" data-item="lives" data-cost="80">80 💎</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Paramètres & Accessibilité -->
+  <div id="modal-settings" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-card">
+      <button id="btn-close-settings" class="modal-close" aria-label="Fermer">✕</button>
+      <h2 id="settings-title" class="modal-title">⚙️ Paramètres</h2>
+
+      <div class="settings-list">
+        <div class="setting-row">
+          <span>🔊 Effets sonores (WebAudio)</span>
+          <button id="toggle-sound" class="btn-3d btn-small">Activé</button>
+        </div>
+        <div class="setting-row">
+          <span>🎵 Mélodie d'ambiance</span>
+          <button id="toggle-music" class="btn-3d btn-small">Désactivé</button>
+        </div>
+        <div class="setting-row">
+          <span>📳 Vibrations (Mobile)</span>
+          <button id="toggle-vibration" class="btn-3d btn-small">Activé</button>
+        </div>
+        <div class="setting-row">
+          <span>👁️ Mode Daltonien (Symboles)</span>
+          <button id="toggle-colorblind" class="btn-3d btn-small">Désactivé</button>
+        </div>
+      </div>
+
+      <hr class="modal-divider" />
+      <button id="btn-reset-save" class="btn-3d btn-danger btn-small">
+        🗑️ Réinitialiser la progression
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
