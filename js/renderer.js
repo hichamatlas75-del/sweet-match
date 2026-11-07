@@ -752,15 +752,20 @@ export class BoardRenderer {
 
     const palette = CANDY_PALETTE[sprite.color] || CANDY_PALETTE[0];
 
-    // Halo d'emballage si bonbon EMBALLÉ ou NOVA
+    // Halo d'emballage pulsant si bonbon EMBALLÉ ou NOVA
     if (sprite.special === SPECIAL_TYPES.WRAPPED) {
       ctx.save();
+      const wrapPulse = this.reducedMotion ? 1 : 1 + Math.sin(now * 0.007) * 0.08;
+      ctx.scale(wrapPulse, wrapPulse);
       ctx.fillStyle = palette.light;
-      ctx.globalAlpha = 0.42;
+      ctx.globalAlpha = 0.45;
       this._roundRect(ctx, -radius * 1.15, -radius * 1.15, radius * 2.3, radius * 2.3, 10);
       ctx.fill();
+      ctx.globalAlpha = 0.95;
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 10;
       ctx.stroke();
       ctx.restore();
     } else if (sprite.special === SPECIAL_TYPES.NOVA) {
@@ -922,35 +927,54 @@ export class BoardRenderer {
   }
 
   _drawColorBomb(ctx, r, now) {
-    // Sphère chocolat-cosmique couverte de pépites multicolores
-    const grad = ctx.createRadialGradient(-r * 0.25, -r * 0.25, r * 0.1, 0, 0, r);
-    grad.addColorStop(0, '#5a3d7a');
-    grad.addColorStop(0.6, '#27153d');
-    grad.addColorStop(1, '#11071f');
+    // Sphère arc-en-ciel rotative + cœur cosmique et pépites lumineuses
+    ctx.save();
+    const spin = this.reducedMotion ? 0 : now * 0.0022;
+    const sprinkleColors = ['#ff2a6d', '#ffcc00', '#00b4ff', '#10d976', '#b53dff', '#ff6d1f'];
 
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 1.02, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
+    // Couronne arc-en-ciel rotative
+    for (let i = 0; i < 6; i++) {
+      const a0 = spin + (Math.PI * 2 * i) / 6;
+      const a1 = spin + (Math.PI * 2 * (i + 1)) / 6;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r * 1.05, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = sprinkleColors[i];
+      ctx.fill();
+    }
+
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#ffe066';
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.05, 0, Math.PI * 2);
     ctx.stroke();
 
-    const sprinkleColors = ['#ff2a6d', '#ffcc00', '#00b4ff', '#10d976', '#b53dff', '#ff6d1f'];
+    // Cœur sombre étoilé
+    const grad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.08, 0, 0, r * 0.72);
+    grad.addColorStop(0, '#5a3d7a');
+    grad.addColorStop(0.7, '#27153d');
+    grad.addColorStop(1, '#11071f');
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
     for (let i = 0; i < 6; i++) {
-      const a = (Math.PI * 2 * i) / 6 + (this.reducedMotion ? 0 : now * 0.0015);
-      const sx = Math.cos(a) * r * 0.56;
-      const sy = Math.sin(a) * r * 0.56;
+      const a = -spin * 1.2 + (Math.PI * 2 * i) / 6;
+      const sx = Math.cos(a) * r * 0.44;
+      const sy = Math.sin(a) * r * 0.44;
       ctx.fillStyle = sprinkleColors[i];
       ctx.beginPath();
-      ctx.arc(sx, sy, r * 0.2, 0, Math.PI * 2);
+      ctx.arc(sx, sy, r * 0.14, 0, Math.PI * 2);
       ctx.fill();
     }
 
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+    ctx.arc(0, 0, r * 0.18, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 
   _drawIngredient(ctx, r, type) {

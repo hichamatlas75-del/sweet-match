@@ -1742,6 +1742,11 @@ export const SPECIAL = {
   NOVA: 'nova'
 };
 
+export const KIND = {
+  CANDY: 'candy',
+  INGREDIENT: 'ingredient'
+};
+
 export const STATUS = {
   PLAYING: 'playing',
   WON: 'won',
@@ -2692,4 +2697,17 @@ export function boardToText(s) {
     lines.push(rowTokens.join(' '));
   }
   return lines.join('\n');
+}
+
+export function getHint(s) {
+  const moves = possibleMoves(s);
+  return moves.length > 0 ? moves[0] : null;
+}
+
+export function getGoals(s) {
+  return (s.goals || []).map(g => ({
+    ...g,
+    progress: g.current || 0,
+    done: (g.current || 0) >= (g.target || 0)
+  }));
 }

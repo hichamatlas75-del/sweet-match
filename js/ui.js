@@ -83,6 +83,9 @@ export class UIManager {
 
     // Boutons HUD en cours de partie
     bind('btn-game-pause', () => this.openModal('settings'));
+    bind('btn-game-hint', () => {
+      if (this.callbacks.onRequestHint) this.callbacks.onRequestHint();
+    });
     bind('btn-game-restart', () => this.callbacks.onRestartLevel());
     bind('btn-game-map', () => this.callbacks.onBackToMap());
 

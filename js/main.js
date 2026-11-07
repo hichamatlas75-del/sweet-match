@@ -41,6 +41,11 @@ class SweetMatchApp {
       onOpenMap: () => this.transitionTo(GAME_STATES.MAP),
       onStartLevel: (levelId, preBoosters) => this.startLevel(levelId, preBoosters),
       onUseBooster: (type) => this.handleBoosterButton(type),
+      onRequestHint: () => {
+        if (this.state === GAME_STATES.PLAYING && this.engine) {
+          this.renderer.hintMove = this.engine.getHint();
+        }
+      },
       onRestartLevel: () => this.restartCurrentLevel(),
       onNextLevel: () => {
         const nextId = Math.min(100, this.currentLevelId + 1);
