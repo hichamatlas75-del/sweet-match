@@ -341,3 +341,37 @@ test('les 100 niveaux de levels.js et les obstacles avancés (Chocolat, Glace, B
   assert.equal(save.consumeLife(), true);
   assert.equal(save.data.lives, 4);
 });
+
+test('GameEngine : boosters (Main magique sur combo spécial, Marteau, +5 coups désamorce bombes et restaure timer)', () => {
+  const engine = new GameEngine({
+    id: 999,
+    rows: 6,
+    cols: 6,
+    numColors: 5,
+    moves: 5,
+    timer: 10,
+    seed: 1234,
+    goals: [{ type: 'score', target: 50000 }]
+  });
+
+  // 1. Main magique (useFreeSwapBooster) sur deux bonbons spéciaux déclenche bien leur combinaison
+  engine.board.grid[2][2].candy.special = SPECIAL_TYPES.STRIPED_H;
+  engine.board.grid[2][3].candy.special = SPECIAL_TYPES.STRIPED_V;
+  const evCombo = engine.useFreeSwapBooster({ r: 2, c: 2 }, { r: 2, c: 3 });
+  assert.ok(evCombo.some(e => e.type === 'booster_used' && e.booster === 'free_swap'));
+  assert.ok(evCombo.some(e => e.type === 'special_activated' && e.comboType === 'STRIPED_STRIPED'));
+
+  // 2. Marteau sucré (useHammerBooster) détruit une case et applique la gravité
+  const evHammer = engine.useHammerBooster(3, 3);
+  assert.ok(evHammer.some(e => e.type === 'booster_used' && e.booster === 'hammer'));
+  assert.ok(evHammer.some(e => e.type === 'clear'));
+
+  // 3. Repêchage (+5 coups) restaure le statut PLAYING, ajoute +15s si timer à 0 et désamorce une bombe à 0
+  engine.timeLeft = 0;
+  engine.status = 'LOST';
+  engine.board.grid[1][1].candy.bombTimer = 0;
+  engine.addExtraMoves(5);
+  assert.equal(engine.status, 'PLAYING');
+  assert.equal(engine.timeLeft, 15);
+  assert.equal(engine.board.grid[1][1].candy.bombTimer, 5);
+});

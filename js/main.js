@@ -39,6 +39,16 @@ class SweetMatchApp {
     this.ui = new UIManager(this.save, this.audio, {
       onOpenMenu: () => this.transitionTo(GAME_STATES.MENU),
       onOpenMap: () => this.transitionTo(GAME_STATES.MAP),
+      onOpenLevelIntro: () => {
+        if (this.state === GAME_STATES.MAP || this.state === GAME_STATES.WIN) {
+          this.state = GAME_STATES.LEVEL_INTRO;
+        }
+      },
+      onCloseLevelIntro: () => {
+        if (this.state === GAME_STATES.LEVEL_INTRO) {
+          this.state = GAME_STATES.MAP;
+        }
+      },
       onStartLevel: (levelId, preBoosters) => this.startLevel(levelId, preBoosters),
       onUseBooster: (type) => this.handleBoosterButton(type),
       onRequestHint: () => {
@@ -49,6 +59,7 @@ class SweetMatchApp {
       onRestartLevel: () => this.restartCurrentLevel(),
       onNextLevel: () => {
         const nextId = Math.min(100, this.currentLevelId + 1);
+        this.transitionTo(GAME_STATES.MAP);
         this.ui.openLevelIntro(nextId);
       },
       onContinueWithExtraMoves: () => this.continueWithExtraMoves(),
@@ -59,7 +70,7 @@ class SweetMatchApp {
     });
 
     this.input = new InputController(boardCanvas, this.renderer, {
-      canInteract: () => this.state === GAME_STATES.PLAYING,
+      canInteract: () => this.state === GAME_STATES.PLAYING && !this.ui.isAnyModalOpen(),
       onSwap: (posA, posB) => this.handlePlayerSwap(posA, posB),
       onCellTap: (pos) => this.handleCellTap(pos),
       getHint: () => (this.engine ? this.engine.getHint() : null)
@@ -113,10 +124,14 @@ class SweetMatchApp {
     }
 
     // Démarrer le compte à rebours si le niveau est chronométré
+    this._startLevelTimerIfNeeded();
+  }
+
+  _startLevelTimerIfNeeded() {
     this._clearLevelTimer();
-    if (this.engine.timeLeft !== null) {
+    if (this.engine && this.engine.timeLeft !== null) {
       this.levelTimerInterval = setInterval(async () => {
-        if (this.state !== GAME_STATES.PLAYING || !this.engine) return;
+        if (this.state !== GAME_STATES.PLAYING || !this.engine || this.ui.isAnyModalOpen()) return;
         const evs = this.engine.tickTimer(1);
         this.ui.updateMovesHUD(this.engine.movesLeft, this.engine.timeLeft);
         if (evs.length > 0) {
@@ -134,8 +149,10 @@ class SweetMatchApp {
   continueWithExtraMoves() {
     if (!this.engine) return;
     this.engine.addExtraMoves(5);
+    this.renderer.syncFromEngine(this.engine);
     this.ui.updateMovesHUD(this.engine.movesLeft, this.engine.timeLeft);
     this.state = GAME_STATES.PLAYING;
+    this._startLevelTimerIfNeeded();
   }
 
   /**

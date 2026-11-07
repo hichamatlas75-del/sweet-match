@@ -279,7 +279,7 @@ export class GameEngine {
           cell.candy = null;
           continue;
         }
-        if (onlyUnlockedNormal && cell.candy && (cell.candy.special === SPECIAL_TYPES.INGREDIENT)) {
+        if (onlyUnlockedNormal && cell.candy && cell.candy.special) {
           continue;
         }
 
@@ -330,9 +330,18 @@ export class GameEngine {
           this._isSwappableCell(cell0) &&
           this._isSwappableCell(cell1) &&
           this._isSwappableCell(cell2) &&
-          this._isSwappableCell(cellSwap)
+          this._isSwappableCell(cellSwap) &&
+          !cell0.candy.special &&
+          !cell1.candy.special &&
+          !cell2.candy.special &&
+          !cellSwap.candy.special
         ) {
-          const targetColor = cell0.candy.color >= 0 ? cell0.candy.color : 0;
+          const orig0 = cell0.candy.color;
+          const orig1 = cell1.candy.color;
+          const orig2 = cell2.candy.color;
+          const origSwap = cellSwap.candy.color;
+
+          const targetColor = orig0 >= 0 ? orig0 : 0;
           const altColor = (targetColor + 1) % this.numColors;
           cell0.candy.color = targetColor;
           cell1.candy.color = targetColor;
@@ -342,6 +351,11 @@ export class GameEngine {
           if (this.findMatches().length === 0 && this.findValidMoves().length > 0) {
             return;
           }
+          // Restaurer les couleurs d'origine si un match accidentel a été créé
+          cell0.candy.color = orig0;
+          cell1.candy.color = orig1;
+          cell2.candy.color = orig2;
+          cellSwap.candy.color = origSwap;
         }
       }
     }
@@ -776,6 +790,9 @@ export class GameEngine {
     this._clearPositions([{ r, c }], events, stateTracker, { fromSpecial: true });
     this._applyGravityAndRefill(events, stateTracker);
     this._resolveBoardLoop(events, stateTracker);
+    if (this.findValidMoves().length === 0) {
+      this.shuffleBoard(events);
+    }
     this._checkWinLose(events);
     return events;
   }
@@ -803,18 +820,38 @@ export class GameEngine {
       swappedPositions: [posA, posB]
     };
 
+    if (isSpecialCombination(cellA.candy, cellB.candy)) {
+      stateTracker.cascadeLevel = 1;
+      this._resolveSpecialCombo(posA, posB, events, stateTracker);
+      this._applyGravityAndRefill(events, stateTracker);
+    }
+
     this._resolveBoardLoop(events, stateTracker);
+    if (this.findValidMoves().length === 0) {
+      this.shuffleBoard(events);
+    }
     this._checkWinLose(events);
     return events;
   }
 
   /**
-   * Booster : +5 coups supplémentaires.
+   * Booster : +5 coups supplémentaires (et +15s / désamorçage d'urgence si utilisé en repêchage).
    */
   addExtraMoves(count = 5) {
     this.movesLeft += count;
+    if (this.timeLeft !== null && this.timeLeft <= 0) {
+      this.timeLeft += 15;
+    }
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const cell = this.board.grid[r][c];
+        if (cell.active && cell.candy && cell.candy.bombTimer !== null && cell.candy.bombTimer <= 0) {
+          cell.candy.bombTimer = 5;
+        }
+      }
+    }
     if (this.status === 'LOST') this.status = 'PLAYING';
-    return [{ type: 'booster_used', booster: 'extra_moves', movesLeft: this.movesLeft }];
+    return [{ type: 'booster_used', booster: 'extra_moves', movesLeft: this.movesLeft, timeLeft: this.timeLeft }];
   }
 
   /**
@@ -862,11 +899,11 @@ export class GameEngine {
 
     // Cas avec transformation préalable (ex: Bombe + Rayé / Bombe + Emballé / Bombe + Nova)
     if (combo.transformBefore && combo.transformBefore.length > 0) {
-      // Détruire d'abord les deux bonbons de la combinaison
-      for (const p of (combo.consumePositions || [posA, posB])) {
-        const c = this.getCell(p.r, p.c);
-        if (c) c.candy = null;
-      }
+      // Détruire d'abord les deux bonbons de la combinaison avec émission d'événement clear
+      this._clearPositions(combo.consumePositions || [posA, posB], events, stateTracker, {
+        fromSpecial: true,
+        suppressChainReaction: true
+      });
 
       const toActivate = [];
       for (const tr of combo.transformBefore) {
@@ -1454,12 +1491,17 @@ export class GameEngine {
   }
 
   _generateNewCandyForTop() {
-    // Si on doit encore faire apparaître des ingrédients et qu'il y en a moins de 2 sur le plateau
-    if (this.ingredientsToSpawn > 0 && this.ingredientsOnBoard < 2 && this.rng() < 0.25) {
-      this.ingredientsToSpawn--;
-      this.ingredientsOnBoard++;
-      const ingType = this.rng() < 0.5 ? 'cherry' : 'hazelnut';
-      return createCandy(-1, SPECIAL_TYPES.INGREDIENT, { ingredientType: ingType });
+    // Si on doit encore faire apparaître des ingrédients :
+    // - garanti si aucun ingrédient n'est sur le plateau ou si les coups restants deviennent critiques
+    // - sinon probabilité de 30% tant qu'il y a moins de 2 ingrédients actifs sur le plateau
+    if (this.ingredientsToSpawn > 0 && this.ingredientsOnBoard < 2) {
+      const mustSpawn = this.ingredientsOnBoard === 0 || this.movesLeft <= this.ingredientsToSpawn * 3;
+      if (mustSpawn || this.rng() < 0.30) {
+        this.ingredientsToSpawn--;
+        this.ingredientsOnBoard++;
+        const ingType = this.rng() < 0.5 ? 'cherry' : 'hazelnut';
+        return createCandy(-1, SPECIAL_TYPES.INGREDIENT, { ingredientType: ingType });
+      }
     }
     const color = Math.floor(this.rng() * this.numColors);
     return createCandy(color, SPECIAL_TYPES.NONE);
@@ -1635,6 +1677,30 @@ export class GameEngine {
           }
         }
         if (remainingChoc > 0 && g.current < g.target) return false;
+      } else if (g.type === 'ice') {
+        let remainingIce = 0;
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            remainingIce += this.board.grid[r][c].ice;
+          }
+        }
+        if (remainingIce > 0 && g.current < g.target) return false;
+      } else if (g.type === 'licorice') {
+        let remainingLic = 0;
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            if (this.board.grid[r][c].obstacle === OBSTACLE_TYPES.LICORICE) remainingLic++;
+          }
+        }
+        if (remainingLic > 0 && g.current < g.target) return false;
+      } else if (g.type === 'locked') {
+        let remainingLock = 0;
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            if (this.board.grid[r][c].candy && this.board.grid[r][c].candy.locked > 0) remainingLock++;
+          }
+        }
+        if (remainingLock > 0 && g.current < g.target) return false;
       } else {
         if (g.current < g.target) return false;
       }

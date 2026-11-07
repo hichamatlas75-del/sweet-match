@@ -817,6 +817,21 @@ canvas:focus-visible {
   margin: 0.8rem 0;
 }
 
+.booster-btn.disabled {
+  opacity: 0.65;
+}
+
+@keyframes shakeError {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.shake-error {
+  animation: shakeError 0.36s ease-in-out;
+  border-color: var(--danger) !important;
+}
+
 /* Préférence utilisateur : réduction des mouvements */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

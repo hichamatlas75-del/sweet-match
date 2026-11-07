@@ -73,7 +73,10 @@ export class UIManager {
     });
 
     // Modale Intro Niveau
-    bind('btn-close-intro', () => this.closeAllModals());
+    bind('btn-close-intro', () => {
+      this.closeAllModals();
+      if (this.callbacks.onCloseLevelIntro) this.callbacks.onCloseLevelIntro();
+    });
     bind('btn-launch-level', () => {
       const levelId = Number(this.modals.intro.dataset.levelId || 1);
       const preBoosters = Array.from(this.selectedPreBoosters);
@@ -112,12 +115,18 @@ export class UIManager {
       this.callbacks.onRestartLevel();
     });
     bind('btn-lose-buy-moves', () => {
-      if (this.save.buyItem('extra_moves', 60, 0)) {
+      const btn = document.getElementById('btn-lose-buy-moves');
+      if (this.save.useBooster('extra_moves') || this.save.buyItem('extra_moves', 60, 0)) {
         this.closeAllModals();
         this.callbacks.onContinueWithExtraMoves();
         this.updateTopStatus();
+        this.updateBoostersHUD();
       } else {
         this.announce('Pas assez de cristaux de sucre !');
+        if (btn) {
+          btn.classList.add('shake-error');
+          setTimeout(() => btn.classList.remove('shake-error'), 400);
+        }
       }
     });
     bind('btn-lose-map', () => {
@@ -218,6 +227,10 @@ export class UIManager {
     Object.values(this.modals).forEach(m => {
       if (m) m.classList.remove('open');
     });
+  }
+
+  isAnyModalOpen() {
+    return Object.values(this.modals).some(m => m && m.classList.contains('open'));
   }
 
   syncSettingsUI() {
@@ -422,6 +435,9 @@ export class UIManager {
     }
 
     this.openModal('intro');
+    if (this.callbacks.onOpenLevelIntro) {
+      this.callbacks.onOpenLevelIntro(levelId);
+    }
   }
 
   /**
@@ -535,6 +551,13 @@ export class UIManager {
     };
     document.getElementById('lose-reason-text').textContent = msgMap[reason] || 'Dommage, essaie encore !';
     document.getElementById('lose-score-val').textContent = `Score : ${score} pts`;
+    const buyBtn = document.getElementById('btn-lose-buy-moves');
+    if (buyBtn) {
+      const freeCount = this.save.data.boosters.extra_moves || 0;
+      buyBtn.textContent = freeCount > 0
+        ? `Continuer (+5 coups — Booster x${freeCount})`
+        : 'Continuer (+5 coups — 60 💎)';
+    }
     this.openModal('lose');
   }
 

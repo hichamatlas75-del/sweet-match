@@ -265,10 +265,14 @@ function buildLevelData(id) {
       { r: 5, c: 3 },
       { r: 5, c: 5 },
       { r: 4, c: 2 },
-      { r: 4, c: 6 }
+      { r: 4, c: 6 },
+      { r: 2, c: 4 },
+      { r: 6, c: 4 },
+      { r: 2, c: 3 },
+      { r: 6, c: 5 }
     ];
-    const limit = Math.min(coords.length, 3 + Math.floor(posInChapter / 2));
-    for (let i = 0; i < limit; i++) {
+    const limit = Math.min(7, 3 + Math.floor(posInChapter / 2));
+    for (let i = 0; i < coords.length && chocCount < limit; i++) {
       const pt = coords[i];
       if (layout[pt.r][pt.c] === 1) {
         layout[pt.r][pt.c] = 'C';

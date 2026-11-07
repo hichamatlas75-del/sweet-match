@@ -186,6 +186,11 @@ export class BoardRenderer {
           this.audio.playSpecialCreated(ev.special);
           const cell = this.visualGrid[ev.position.r]?.[ev.position.c];
           if (cell) {
+            if (cell.candy && cell.candy.id !== ev.candy.id) {
+              this.candySprites.delete(cell.candy.id);
+            }
+            if (cell.ice > 0) cell.ice = Math.max(0, cell.ice - 1);
+            else if (cell.jelly > 0) cell.jelly = Math.max(0, cell.jelly - 1);
             cell.candy = JSON.parse(JSON.stringify(ev.candy));
             const pos = this.cellToPixel(ev.position.r, ev.position.c);
             this.candySprites.set(ev.candy.id, {
@@ -208,11 +213,13 @@ export class BoardRenderer {
           const pos = ev.position || (ev.positions && ev.positions[0]);
           if (pos) {
             const px = this.cellToPixel(pos.r, pos.c);
+            const logicalW = this.cols * this.cellSize + this.boardPadding * 2;
+            const logicalH = this.rows * this.cellSize + this.boardPadding * 2;
             if (ev.effectType === 'line_h' || ev.comboType === 'STRIPED_STRIPED' || ev.comboType === 'STRIPED_WRAPPED') {
-              this.laserBeams.push({ x: 0, y: px.y, w: this.canvas.width, h: this.cellSize * 0.65, life: 1 });
+              this.laserBeams.push({ x: 0, y: px.y, w: logicalW, h: this.cellSize * 0.65, life: 1 });
             }
             if (ev.effectType === 'line_v' || ev.comboType === 'STRIPED_STRIPED' || ev.comboType === 'STRIPED_WRAPPED') {
-              this.laserBeams.push({ x: px.x, y: 0, w: this.cellSize * 0.65, h: this.canvas.height, life: 1, vertical: true });
+              this.laserBeams.push({ x: px.x, y: 0, w: this.cellSize * 0.65, h: logicalH, life: 1, vertical: true });
             }
             if (ev.special === SPECIAL_TYPES.COLOR_BOMB || ev.comboType?.startsWith('BOMB')) {
               if (!this.reducedMotion) this.flashAlpha = 0.75;
