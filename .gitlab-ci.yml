@@ -1,0 +1,23 @@
+image: node:22-alpine
+
+stages:
+  - test
+  - deploy
+
+unit_tests:
+  stage: test
+  script:
+    - npm test
+
+pages:
+  stage: deploy
+  needs:
+    - unit_tests
+  script:
+    - mkdir -p public
+    - cp -r index.html style.css manifest.json sw.js js public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
